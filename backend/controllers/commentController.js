@@ -34,12 +34,8 @@ exports.createComment = async (req, res) => {
         .json({ message: "Not authorized to comment on this ticket" });
     }
 
-    // Auto-add comment author to teamMembers if not already a member
-    if (!project.teamMembers.includes(req.user._id)) {
-      project.teamMembers.push(req.user._id);
-      await project.save();
-    }
-
+    // Enforce: only project members (owner or teamMembers) can comment.
+    // Do NOT auto-add comment authors here; membership must be explicit.
     const comment = await Comment.create({
       ticket: ticketId,
       user: req.user._id,

@@ -22,6 +22,7 @@ import {
   CheckCircle,
   Build,
 } from "@mui/icons-material";
+import toast from "react-hot-toast";
 import { useTicket } from "../contexts/TicketContext";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
@@ -58,7 +59,7 @@ const KanbanBoard = ({ onEditTicket, onDeleteTicket, onViewTicket }) => {
       return;
     }
 
-    const ticket = tickets.find((t) => t._id === draggableId);
+    const ticket = tickets.find((t) => String(t._id) === draggableId);
     if (!ticket) return;
 
     const sourceColumn = [...columns[source.droppableId]];
@@ -80,6 +81,10 @@ const KanbanBoard = ({ onEditTicket, onDeleteTicket, onViewTicket }) => {
       try {
         await updateTicketStatus(draggableId, destination.droppableId);
       } catch (error) {
+        console.error("Failed to update ticket status:", error);
+        toast.error(
+          error.response?.data?.message || "Failed to update ticket status",
+        );
         const revertColumns = {
           ...columns,
           [source.droppableId]: [...columns[source.droppableId]],
@@ -89,7 +94,7 @@ const KanbanBoard = ({ onEditTicket, onDeleteTicket, onViewTicket }) => {
       }
     }
   };
-
+  
   const handleMenuClick = (event, ticket) => {
     event.stopPropagation();
     setMenuAnchor(event.currentTarget);
@@ -220,7 +225,7 @@ const KanbanBoard = ({ onEditTicket, onDeleteTicket, onViewTicket }) => {
                     {columns[columnId]?.map((ticket, index) => (
                       <Draggable
                         key={ticket._id}
-                        draggableId={ticket._id}
+                        draggableId={String(ticket._id)}
                         index={index}
                       >
                         {(provided, snapshot) => (

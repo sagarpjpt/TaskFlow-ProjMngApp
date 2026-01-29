@@ -303,11 +303,13 @@ exports.updateTicketStatus = async (req, res) => {
       return res.status(404).json({ message: "Ticket not found" });
     }
 
-    const project = await Project.findById(ticket.project._id);
+    const project = await Project.findById(ticket.project._id).populate(
+      "teamMembers",
+    );
     const isAuthorized =
       project.owner.toString() === req.user._id.toString() ||
       project.teamMembers.some(
-        (member) => member.toString() === req.user._id.toString(),
+        (member) => member._id.toString() === req.user._id.toString(),
       );
 
     if (!isAuthorized) {
