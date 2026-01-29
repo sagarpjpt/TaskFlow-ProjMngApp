@@ -1,8 +1,8 @@
-const Comment = require('../models/Comment');
-const Ticket = require('../models/Ticket');
-const Project = require('../models/Project');
-const User = require('../models/User');
-const { sendEmail, emailTemplates } = require('../utils/emailService');
+const Comment = require("../models/Comment");
+const Ticket = require("../models/Ticket");
+const Project = require("../models/Project");
+const User = require("../models/User");
+const { sendEmail, emailTemplates } = require("../utils/emailService");
 
 exports.createComment = async (req, res) => {
   try {
@@ -10,25 +10,34 @@ exports.createComment = async (req, res) => {
     const { ticketId } = req.params;
 
     if (!text) {
-      return res.status(400).json({ message: 'Comment text is required' });
+      return res.status(400).json({ message: "Comment text is required" });
     }
 
-    const ticket = await Ticket.findById(ticketId)
-      .populate('project creator assignee');
+    const ticket = await Ticket.findById(ticketId).populate(
+      "project creator assignee",
+    );
 
     if (!ticket) {
-      return res.status(404).json({ message: 'Ticket not found' });
+      return res.status(404).json({ message: "Ticket not found" });
     }
 
     const project = await Project.findById(ticket.project._id);
     const isAuthorized =
       project.owner.toString() === req.user._id.toString() ||
       project.teamMembers.some(
-        (member) => member.toString() === req.user._id.toString()
+        (member) => member.toString() === req.user._id.toString(),
       );
 
     if (!isAuthorized) {
-      return res.status(403).json({ message: 'Not authorized to comment on this ticket' });
+      return res
+        .status(403)
+        .json({ message: "Not authorized to comment on this ticket" });
+    }
+
+    // Auto-add comment author to teamMembers if not already a member
+    if (!project.teamMembers.includes(req.user._id)) {
+      project.teamMembers.push(req.user._id);
+      await project.save();
     }
 
     const comment = await Comment.create({
@@ -37,15 +46,21 @@ exports.createComment = async (req, res) => {
       text,
     });
 
-    await comment.populate('user', 'name email');
+    await comment.populate("user", "name email");
 
     const notifyUsers = new Set();
-    
-    if (ticket.creator && ticket.creator._id.toString() !== req.user._id.toString()) {
+
+    if (
+      ticket.creator &&
+      ticket.creator._id.toString() !== req.user._id.toString()
+    ) {
       notifyUsers.add(ticket.creator._id.toString());
     }
-    
-    if (ticket.assignee && ticket.assignee._id.toString() !== req.user._id.toString()) {
+
+    if (
+      ticket.assignee &&
+      ticket.assignee._id.toString() !== req.user._id.toString()
+    ) {
       notifyUsers.add(ticket.assignee._id.toString());
     }
 
@@ -61,11 +76,11 @@ exports.createComment = async (req, res) => {
               ticket.title,
               req.user.name,
               text,
-              project.title
+              project.title,
             ),
           });
         } catch (emailError) {
-          console.error('Failed to send comment notification:', emailError);
+          console.error("Failed to send comment notification:", emailError);
         }
       }
     }
@@ -80,25 +95,27 @@ exports.getComments = async (req, res) => {
   try {
     const { ticketId } = req.params;
 
-    const ticket = await Ticket.findById(ticketId).populate('project');
+    const ticket = await Ticket.findById(ticketId).populate("project");
 
     if (!ticket) {
-      return res.status(404).json({ message: 'Ticket not found' });
+      return res.status(404).json({ message: "Ticket not found" });
     }
 
     const project = await Project.findById(ticket.project._id);
     const isAuthorized =
       project.owner.toString() === req.user._id.toString() ||
       project.teamMembers.some(
-        (member) => member.toString() === req.user._id.toString()
+        (member) => member.toString() === req.user._id.toString(),
       );
 
     if (!isAuthorized) {
-      return res.status(403).json({ message: 'Not authorized to view comments' });
+      return res
+        .status(403)
+        .json({ message: "Not authorized to view comments" });
     }
 
     const comments = await Comment.find({ ticket: ticketId })
-      .populate('user', 'name email')
+      .populate("user", "name email")
       .sort({ createdAt: 1 });
 
     res.json(comments);
@@ -113,20 +130,22 @@ exports.updateComment = async (req, res) => {
     const comment = await Comment.findById(req.params.id);
 
     if (!comment) {
-      return res.status(404).json({ message: 'Comment not found' });
+      return res.status(404).json({ message: "Comment not found" });
     }
 
     if (comment.user.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Not authorized to update this comment' });
+      return res
+        .status(403)
+        .json({ message: "Not authorized to update this comment" });
     }
 
     if (!text) {
-      return res.status(400).json({ message: 'Comment text is required' });
+      return res.status(400).json({ message: "Comment text is required" });
     }
 
     comment.text = text;
     await comment.save();
-    await comment.populate('user', 'name email');
+    await comment.populate("user", "name email");
 
     res.json(comment);
   } catch (error) {
@@ -139,15 +158,17 @@ exports.deleteComment = async (req, res) => {
     const comment = await Comment.findById(req.params.id);
 
     if (!comment) {
-      return res.status(404).json({ message: 'Comment not found' });
+      return res.status(404).json({ message: "Comment not found" });
     }
 
     if (comment.user.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Not authorized to delete this comment' });
+      return res
+        .status(403)
+        .json({ message: "Not authorized to delete this comment" });
     }
 
     await Comment.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Comment deleted' });
+    res.json({ message: "Comment deleted" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

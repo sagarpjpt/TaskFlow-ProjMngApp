@@ -1,29 +1,54 @@
-const Ticket = require('../models/Ticket');
-const Project = require('../models/Project');
-const User = require('../models/User');
-const { sendEmail, emailTemplates } = require('../utils/emailService');
+const Ticket = require("../models/Ticket");
+const Project = require("../models/Project");
+const User = require("../models/User");
+const Comment = require("../models/Comment");
+const { sendEmail, emailTemplates } = require("../utils/emailService");
 
 exports.createTicket = async (req, res) => {
   try {
-    const { title, description, project, assignee, priority, type, tags } = req.body;
+    const { title, description, project, assignee, priority, type, tags } =
+      req.body;
 
     if (!title || !project) {
-      return res.status(400).json({ message: 'Title and project are required' });
+      return res
+        .status(400)
+        .json({ message: "Title and project are required" });
     }
 
     const projectExists = await Project.findById(project);
     if (!projectExists) {
-      return res.status(404).json({ message: 'Project not found' });
+      return res.status(404).json({ message: "Project not found" });
     }
 
     const isTeamMember =
       projectExists.owner.toString() === req.user._id.toString() ||
       projectExists.teamMembers.some(
-        (member) => member.toString() === req.user._id.toString()
+        (member) => member.toString() === req.user._id.toString(),
       );
 
     if (!isTeamMember) {
-      return res.status(403).json({ message: 'Not authorized to create tickets in this project' });
+      return res
+        .status(403)
+        .json({ message: "Not authorized to create tickets in this project" });
+    }
+
+    // Auto-add creator to teamMembers if not already present
+    if (!projectExists.teamMembers.includes(req.user._id)) {
+      projectExists.teamMembers.push(req.user._id);
+      await projectExists.save();
+    }
+
+    // Auto-add assignee to teamMembers if provided and not already a member
+    if (assignee) {
+      const assigneeExists = await User.findById(assignee);
+      if (!assigneeExists) {
+        return res.status(404).json({ message: "Assignee user not found" });
+      }
+
+      if (!projectExists.teamMembers.includes(assignee)) {
+        projectExists.teamMembers.push(assignee);
+        await projectExists.save();
+      }
     }
 
     const ticket = await Ticket.create({
@@ -32,12 +57,12 @@ exports.createTicket = async (req, res) => {
       project,
       creator: req.user._id,
       assignee: assignee || null,
-      priority: priority || 'medium',
-      type: type || 'bug',
+      priority: priority || "medium",
+      type: type || "bug",
       tags: tags || [],
     });
 
-    await ticket.populate('creator assignee project', 'name email title');
+    await ticket.populate("creator assignee project", "name email title");
 
     if (assignee && assignee !== req.user._id.toString()) {
       const assignedUser = await User.findById(assignee);
@@ -51,11 +76,11 @@ exports.createTicket = async (req, res) => {
               title,
               ticket._id,
               projectExists.title,
-              req.user.name
+              req.user.name,
             ),
           });
         } catch (emailError) {
-          console.error('Failed to send ticket assignment email:', emailError);
+          console.error("Failed to send ticket assignment email:", emailError);
         }
       }
     }
@@ -75,27 +100,26 @@ exports.getTickets = async (req, res) => {
     if (projectId) {
       const project = await Project.findById(projectId);
       if (!project) {
-        return res.status(404).json({ message: 'Project not found' });
+        return res.status(404).json({ message: "Project not found" });
       }
 
       const isTeamMember =
         project.owner.toString() === req.user._id.toString() ||
         project.teamMembers.some(
-          (member) => member.toString() === req.user._id.toString()
+          (member) => member.toString() === req.user._id.toString(),
         );
 
       if (!isTeamMember) {
-        return res.status(403).json({ message: 'Not authorized to view tickets in this project' });
+        return res
+          .status(403)
+          .json({ message: "Not authorized to view tickets in this project" });
       }
 
       query.project = projectId;
     } else {
       const userProjects = await Project.find({
-        $or: [
-          { owner: req.user._id },
-          { teamMembers: req.user._id },
-        ],
-      }).select('_id');
+        $or: [{ owner: req.user._id }, { teamMembers: req.user._id }],
+      }).select("_id");
 
       query.project = { $in: userProjects.map((p) => p._id) };
     }
@@ -107,14 +131,14 @@ exports.getTickets = async (req, res) => {
 
     if (search) {
       query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
+        { title: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
       ];
     }
 
     const tickets = await Ticket.find(query)
-      .populate('creator assignee', 'name email')
-      .populate('project', 'title')
+      .populate("creator assignee", "name email")
+      .populate("project", "title")
       .sort({ createdAt: -1 });
 
     res.json(tickets);
@@ -126,22 +150,24 @@ exports.getTickets = async (req, res) => {
 exports.getTicketById = async (req, res) => {
   try {
     const ticket = await Ticket.findById(req.params.id)
-      .populate('creator assignee', 'name email')
-      .populate('project', 'title owner teamMembers');
+      .populate("creator assignee", "name email")
+      .populate("project", "title owner teamMembers");
 
     if (!ticket) {
-      return res.status(404).json({ message: 'Ticket not found' });
+      return res.status(404).json({ message: "Ticket not found" });
     }
 
     const project = ticket.project;
     const isAuthorized =
       project.owner.toString() === req.user._id.toString() ||
       project.teamMembers.some(
-        (member) => member.toString() === req.user._id.toString()
+        (member) => member.toString() === req.user._id.toString(),
       );
 
     if (!isAuthorized) {
-      return res.status(403).json({ message: 'Not authorized to view this ticket' });
+      return res
+        .status(403)
+        .json({ message: "Not authorized to view this ticket" });
     }
 
     res.json(ticket);
@@ -152,24 +178,40 @@ exports.getTicketById = async (req, res) => {
 
 exports.updateTicket = async (req, res) => {
   try {
-    const ticket = await Ticket.findById(req.params.id).populate('project');
+    const ticket = await Ticket.findById(req.params.id).populate("project");
 
     if (!ticket) {
-      return res.status(404).json({ message: 'Ticket not found' });
+      return res.status(404).json({ message: "Ticket not found" });
     }
 
     const project = await Project.findById(ticket.project._id);
     const isAuthorized =
       project.owner.toString() === req.user._id.toString() ||
       project.teamMembers.some(
-        (member) => member.toString() === req.user._id.toString()
+        (member) => member.toString() === req.user._id.toString(),
       );
 
     if (!isAuthorized) {
-      return res.status(403).json({ message: 'Not authorized to update this ticket' });
+      return res
+        .status(403)
+        .json({ message: "Not authorized to update this ticket" });
     }
 
-    const { title, description, status, priority, assignee, type, tags } = req.body;
+    const { title, description, status, priority, assignee, type, tags } =
+      req.body;
+
+    // Auto-add assignee to teamMembers if being changed and not already a member
+    if (assignee !== undefined && assignee !== null) {
+      const assigneeExists = await User.findById(assignee);
+      if (!assigneeExists) {
+        return res.status(404).json({ message: "Assignee user not found" });
+      }
+
+      if (!project.teamMembers.includes(assignee)) {
+        project.teamMembers.push(assignee);
+        await project.save();
+      }
+    }
 
     const oldAssignee = ticket.assignee ? ticket.assignee.toString() : null;
     const newAssignee = assignee !== undefined ? assignee : oldAssignee;
@@ -183,9 +225,13 @@ exports.updateTicket = async (req, res) => {
     if (tags) ticket.tags = tags;
 
     await ticket.save();
-    await ticket.populate('creator assignee', 'name email');
+    await ticket.populate("creator assignee", "name email");
 
-    if (newAssignee && newAssignee !== oldAssignee && newAssignee !== req.user._id.toString()) {
+    if (
+      newAssignee &&
+      newAssignee !== oldAssignee &&
+      newAssignee !== req.user._id.toString()
+    ) {
       const assignedUser = await User.findById(newAssignee);
       if (assignedUser && assignedUser.emailNotifications) {
         try {
@@ -197,11 +243,11 @@ exports.updateTicket = async (req, res) => {
               ticket.title,
               ticket._id,
               project.title,
-              req.user.name
+              req.user.name,
             ),
           });
         } catch (emailError) {
-          console.error('Failed to send assignment notification:', emailError);
+          console.error("Failed to send assignment notification:", emailError);
         }
       }
     }
@@ -214,10 +260,10 @@ exports.updateTicket = async (req, res) => {
 
 exports.deleteTicket = async (req, res) => {
   try {
-    const ticket = await Ticket.findById(req.params.id).populate('project');
+    const ticket = await Ticket.findById(req.params.id).populate("project");
 
     if (!ticket) {
-      return res.status(404).json({ message: 'Ticket not found' });
+      return res.status(404).json({ message: "Ticket not found" });
     }
 
     const project = await Project.findById(ticket.project._id);
@@ -227,12 +273,15 @@ exports.deleteTicket = async (req, res) => {
 
     if (!isOwnerOrCreator) {
       return res.status(403).json({
-        message: 'Only project owner or ticket creator can delete this ticket',
+        message: "Only project owner or ticket creator can delete this ticket",
       });
     }
 
+    // Delete all comments associated with this ticket
+    await Comment.deleteMany({ ticket: req.params.id });
+
     await Ticket.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Ticket deleted' });
+    res.json({ message: "Ticket and associated comments deleted" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -242,31 +291,35 @@ exports.updateTicketStatus = async (req, res) => {
   try {
     const { status } = req.body;
 
-    if (!status || !['todo', 'in-progress', 'done'].includes(status)) {
-      return res.status(400).json({ message: 'Valid status is required' });
+    if (!status || !["todo", "in-progress", "done"].includes(status)) {
+      return res.status(400).json({ message: "Valid status is required" });
     }
 
-    const ticket = await Ticket.findById(req.params.id).populate('project assignee');
+    const ticket = await Ticket.findById(req.params.id).populate(
+      "project assignee",
+    );
 
     if (!ticket) {
-      return res.status(404).json({ message: 'Ticket not found' });
+      return res.status(404).json({ message: "Ticket not found" });
     }
 
     const project = await Project.findById(ticket.project._id);
     const isAuthorized =
       project.owner.toString() === req.user._id.toString() ||
       project.teamMembers.some(
-        (member) => member.toString() === req.user._id.toString()
+        (member) => member.toString() === req.user._id.toString(),
       );
 
     if (!isAuthorized) {
-      return res.status(403).json({ message: 'Not authorized to update ticket status' });
+      return res
+        .status(403)
+        .json({ message: "Not authorized to update ticket status" });
     }
 
     const oldStatus = ticket.status;
     ticket.status = status;
     await ticket.save();
-    await ticket.populate('creator assignee', 'name email');
+    await ticket.populate("creator assignee", "name email");
 
     if (
       ticket.assignee &&
@@ -283,11 +336,11 @@ exports.updateTicketStatus = async (req, res) => {
             oldStatus,
             status,
             req.user.name,
-            project.title
+            project.title,
           ),
         });
       } catch (emailError) {
-        console.error('Failed to send status change notification:', emailError);
+        console.error("Failed to send status change notification:", emailError);
       }
     }
 

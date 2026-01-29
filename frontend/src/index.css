@@ -1,0 +1,184 @@
+@import "tailwindcss";
+/* @import url("https://fonts.googleapis.com/css2?family=Inconsolata:wght@200..900&display=swap"); */
+
+/* 
+   THEME VARIABLES
+    */
+@layer theme {
+  :root {
+    --color-primary: #f63049;
+    --color-secondary: #d02752;
+    --color-accent: #8a244b;
+    --color-dark: #111f35;
+
+    --color-text-light: #ffffff;
+    --color-text-muted: #8a244b;
+
+    --color-border: #d02752;
+    --color-ring: #f63049;
+
+    --font-mono: "Inconsolata", monospace;
+    --lh-tight: 1.25;
+    --lh-normal: 1.5;
+    --lh-relaxed: 1.75;
+  }
+}
+
+/* 
+   BASE STYLES
+    */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: var(--font-mono);
+    @apply bg-[color:var(--color-dark)]
+           text-[color:var(--color-text-light)]
+           antialiased
+           text-sm sm:text-base;
+    line-height: var(--lh-normal);
+  }
+
+  h1 {
+    @apply text-3xl sm:text-4xl font-bold text-[color:var(--color-primary)];
+    line-height: var(--lh-tight);
+  }
+
+  h2 {
+    @apply text-2xl sm:text-3xl font-bold text-[color:var(--color-primary)];
+    line-height: var(--lh-tight);
+  }
+
+  h3 {
+    @apply text-xl sm:text-2xl font-semibold text-[color:var(--color-primary)];
+    line-height: var(--lh-tight);
+  }
+
+  h4 {
+    @apply text-lg sm:text-xl font-semibold text-[color:var(--color-primary)];
+  }
+
+  h5 {
+    @apply text-base sm:text-lg font-semibold text-[color:var(--color-primary)];
+  }
+
+  h6 {
+    @apply text-sm sm:text-base font-semibold text-[color:var(--color-primary)];
+  }
+
+  p {
+    @apply text-sm sm:text-base text-[color:var(--color-text-light)];
+    line-height: var(--lh-normal);
+  }
+
+  a {
+    @apply text-[color:var(--color-primary)]
+           hover:text-[color:var(--color-secondary)]
+           transition-colors duration-200;
+  }
+
+  button {
+    @apply font-semibold transition-all duration-200;
+  }
+}
+
+/* 
+   CUSTOM UTILITIES
+    */
+@layer utilities {
+  /* Backgrounds */
+  .bg-primary { background-color: var(--color-primary); }
+  .bg-secondary { background-color: var(--color-secondary); }
+  .bg-accent { background-color: var(--color-accent); }
+  .bg-dark { background-color: var(--color-dark); }
+
+  /* Text */
+  .text-primary { color: var(--color-primary); }
+  .text-secondary { color: var(--color-secondary); }
+  .text-accent { color: var(--color-accent); }
+
+  /* Borders / Ring */
+  .border-primary { border-color: var(--color-primary); }
+  .ring-primary { --tw-ring-color: var(--color-ring); }
+
+  /* Layout containers */
+  .container-fluid {
+    @apply w-full mx-auto px-4 sm:px-6 md:px-8 lg:px-10;
+  }
+
+  .container-tight {
+    @apply w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-8;
+  }
+
+  .container-wide {
+    @apply w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8;
+  }
+
+  /* Spacing helpers */
+  .gap-responsive {
+    @apply gap-2 sm:gap-3 md:gap-4 lg:gap-6;
+  }
+
+  .p-responsive {
+    @apply p-3 sm:p-4 md:p-6 lg:p-8;
+  }
+
+  /* Readability */
+  .text-readable {
+    @apply text-sm sm:text-base font-medium;
+    line-height: var(--lh-relaxed);
+  }
+
+  .text-on-dark {
+    @apply text-white;
+  }
+
+  .text-on-primary {
+    @apply text-white font-semibold;
+  }
+
+  /* Line clamp */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/* 
+   CUSTOM SCROLLBAR
+    */
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #f63049 #111f35;
+}
+
+/* WebKit */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #111f35;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #f63049, #d02752);
+  border-radius: 999px;
+  border: 2px solid #111f35;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #d02752, #8a244b);
+}
+
+::-webkit-scrollbar-corner {
+  background: #111f35;
+}
