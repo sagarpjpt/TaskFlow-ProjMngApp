@@ -384,3 +384,101 @@ exports.deleteUser = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+exports.updateRole = async (req, res) => {
+  try {
+    const { role } = req.body;
+    const allowedRoles = ['developer', 'manager', 'viewer'];
+    
+    if (!allowedRoles.includes(role)) {
+      return res.status(400).json({ 
+        message: 'Invalid role. Allowed: developer, manager, viewer' 
+      });
+    }
+
+    if (role === 'admin') {
+      return res.status(403).json({ 
+        message: 'Cannot self-assign admin role' 
+      });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    user.role = role;
+    await user.save();
+
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      isEmailVerified: user.isEmailVerified,
+      message: 'Role updated successfully'
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.getTeamMembers = async (req, res) => {
+  try {
+    const userProjects = await Project.find({
+      $or: [
+        { owner: req.user._id },
+        { teamMembers: req.user._id }
+      ]
+    }).select('_id teamMembers title key');
+
+    const teamMemberIds = new Set();
+    userProjects.forEach(project => {
+      if (project.owner) {
+        teamMemberIds.add(project.owner.toString());
+      }
+      project.teamMembers.forEach(memberId => {
+        teamMemberIds.add(memberId.toString());
+      });
+    });
+
+    const users = await User.find({
+      _id: { $in: Array.from(teamMemberIds) }
+    }).select('-password');
+
+    const usersWithStats = await Promise.all(
+      users.map(async (user) => {
+        const activeTickets = await Ticket.countDocuments({
+          assignee: user._id,
+          status: { $in: ['todo', 'in-progress'] }
+        });
+
+        const completedTickets = await Ticket.countDocuments({
+          assignee: user._id,
+          status: 'done'
+        });
+
+        const userProjectsList = await Project.find({
+          $or: [
+            { owner: user._id },
+            { teamMembers: user._id }
+          ]
+        }).select('title key');
+
+        return {
+          ...user.toObject(),
+          stats: {
+            activeTickets,
+            completedTickets,
+            projectCount: userProjectsList.length
+          },
+          sharedProjects: userProjectsList
+        };
+      })
+    );
+
+    res.json({ users: usersWithStats });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

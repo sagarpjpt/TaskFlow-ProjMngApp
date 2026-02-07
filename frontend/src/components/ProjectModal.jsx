@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
 import {
   Dialog,
   DialogTitle,
@@ -8,8 +8,8 @@ import {
   TextField,
   Button,
   Box,
-} from '@mui/material';
-import { useProject } from '../contexts/ProjectContext';
+} from "@mui/material";
+import { useProject } from "../contexts/ProjectContext";
 
 const ProjectModal = ({ open, onClose, project = null }) => {
   const { createProject, updateProject, loading } = useProject();
@@ -22,21 +22,24 @@ const ProjectModal = ({ open, onClose, project = null }) => {
     formState: { errors },
   } = useForm({
     defaultValues: {
-      title: '',
-      description: '',
+      title: "",
+      description: "",
+      key: ''
     },
   });
 
   useEffect(() => {
     if (project) {
       reset({
-        title: project.title || '',
-        description: project.description || '',
+        title: project.title || "",
+        description: project.description || "",
+        key: project.key || '',
       });
     } else {
       reset({
-        title: '',
-        description: '',
+        title: "",
+        key: '',
+        description: "",
       });
     }
   }, [project, reset]);
@@ -51,7 +54,7 @@ const ProjectModal = ({ open, onClose, project = null }) => {
       reset();
       onClose();
     } catch (error) {
-      console.error('Error saving project:', error);
+      console.error("Error saving project:", error);
     }
   };
 
@@ -62,17 +65,39 @@ const ProjectModal = ({ open, onClose, project = null }) => {
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{isEdit ? 'Edit Project' : 'Create New Project'}</DialogTitle>
+      <DialogTitle>
+        {isEdit ? "Edit Project" : "Create New Project"}
+      </DialogTitle>
       <form onSubmit={handleSubmit(onSubmit)}>
         <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <TextField
+              label="Project Key"
+              {...register("key", {
+                required: "Key is required",
+                pattern: {
+                  value: /^[A-Z]{2,10}$/,
+                  message: "Key must be 2-10 uppercase letters",
+                },
+              })}
+              error={!!errors.key}
+              helperText={
+                errors.key?.message ||
+                "e.g., PROJ, BUG (2-10 uppercase letters)"
+              }
+              fullWidth
+              inputProps={{ style: { textTransform: "uppercase" } }}
+              onChange={(e) => {
+                e.target.value = e.target.value.toUpperCase();
+              }}
+            />
             <TextField
               label="Project Title"
-              {...register('title', {
-                required: 'Title is required',
+              {...register("title", {
+                required: "Title is required",
                 maxLength: {
                   value: 100,
-                  message: 'Title cannot exceed 100 characters',
+                  message: "Title cannot exceed 100 characters",
                 },
               })}
               error={!!errors.title}
@@ -80,13 +105,12 @@ const ProjectModal = ({ open, onClose, project = null }) => {
               fullWidth
               autoFocus
             />
-
             <TextField
               label="Description"
-              {...register('description', {
+              {...register("description", {
                 maxLength: {
                   value: 500,
-                  message: 'Description cannot exceed 500 characters',
+                  message: "Description cannot exceed 500 characters",
                 },
               })}
               error={!!errors.description}
@@ -102,7 +126,7 @@ const ProjectModal = ({ open, onClose, project = null }) => {
             Cancel
           </Button>
           <Button type="submit" variant="contained" disabled={loading}>
-            {loading ? 'Saving...' : isEdit ? 'Update' : 'Create'}
+            {loading ? "Saving..." : isEdit ? "Update" : "Create"}
           </Button>
         </DialogActions>
       </form>

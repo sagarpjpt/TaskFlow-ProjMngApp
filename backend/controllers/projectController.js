@@ -5,34 +5,93 @@ const User = require("../models/User");
 
 exports.createProject = async (req, res) => {
   try {
-    const { title, description, teamMembers } = req.body;
+    const { title, key, description, teamMembers } = req.body;
 
     if (!title) {
       return res.status(400).json({ message: "Project title is required" });
     }
 
+    if (!key) {
+      return res.status(400).json({ message: "Project key is required" });
+    }
+
+    const keyRegex = /^[A-Z]{2,10}$/;
+    if (!keyRegex.test(key)) {
+      return res.status(400).json({ 
+        message: "Project key must be 2-10 uppercase letters" 
+      });
+    }
+
+    const existingProject = await Project.findOne({ key: key.toUpperCase() });
+    if (existingProject) {
+      return res.status(400).json({ 
+        message: "Project key already exists. Please choose a different key." 
+      });
+    }
+
     const project = await Project.create({
       title,
+      key: key.toUpperCase(),
       description,
       owner: req.user._id,
       teamMembers: teamMembers || [req.user._id],
     });
 
     await project.populate("owner teamMembers", "name email");
-
     res.status(201).json(project);
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({ 
+        message: "Project key already exists. Please choose a different key." 
+      });
+    }
     res.status(500).json({ message: error.message });
   }
 };
 
 exports.getProjects = async (req, res) => {
   try {
+    const { includeStats } = req.query;
+
     const projects = await Project.find({
       $or: [{ owner: req.user._id }, { teamMembers: req.user._id }],
     })
       .populate("owner teamMembers", "name email")
       .sort({ createdAt: -1 });
+
+    if (includeStats === 'true') {
+      const projectsWithStats = await Promise.all(
+        projects.map(async (project) => {
+          const ticketCounts = await Ticket.aggregate([
+            { $match: { project: project._id } },
+            { $group: { _id: '$status', count: { $sum: 1 } } }
+          ]);
+          
+          const lastTicket = await Ticket.findOne({ project: project._id })
+            .sort({ updatedAt: -1 })
+            .select('updatedAt');
+          
+          const statusBreakdown = { todo: 0, 'in-progress': 0, done: 0 };
+          let totalTickets = 0;
+          
+          ticketCounts.forEach(item => {
+            statusBreakdown[item._id] = item.count;
+            totalTickets += item.count;
+          });
+
+          return {
+            ...project.toObject(),
+            stats: {
+              totalTickets,
+              byStatus: statusBreakdown,
+              lastActivity: lastTicket?.updatedAt || project.updatedAt
+            }
+          };
+        })
+      );
+      
+      return res.json(projectsWithStats);
+    }
 
     res.json(projects);
   } catch (error) {

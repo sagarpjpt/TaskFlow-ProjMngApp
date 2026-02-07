@@ -276,7 +276,7 @@ const KanbanBoard = ({ onEditTicket, onDeleteTicket, onViewTicket }) => {
                                       fontSize: { xs: "0.7rem", md: "0.8rem" },
                                     }}
                                   >
-                                    #{ticket._id.slice(-6).toUpperCase()}
+                                    {ticket.project?.key}-{ticket.ticketNumber}
                                   </Typography>
                                 </Box>
                                 <IconButton

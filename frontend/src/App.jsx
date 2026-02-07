@@ -11,6 +11,11 @@ import VerifyEmail from './pages/VerifyEmail';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
+import Workspace from './pages/Workspace';
+import MyTasks from './pages/MyTasks';
+import Members from './pages/Members';
+import Archived from './pages/Archived';
+import Settings from './pages/Settings';
 
 const theme = createTheme({
   palette: {
@@ -99,6 +104,7 @@ function App() {
                 <Route path="/verify-email" element={<VerifyEmail />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password/:token" element={<ResetPassword />} />
+                
                 <Route
                   path="/dashboard"
                   element={
@@ -107,36 +113,54 @@ function App() {
                     </ProtectedRoute>
                   }
                 />
+                <Route
+                  path="/workspace"
+                  element={
+                    <ProtectedRoute>
+                      <Workspace />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/my-tasks"
+                  element={
+                    <ProtectedRoute>
+                      <MyTasks />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/members"
+                  element={
+                    <ProtectedRoute>
+                      <Members />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/archived"
+                  element={
+                    <ProtectedRoute>
+                      <Archived />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/settings"
+                  element={
+                    <ProtectedRoute>
+                      <Settings />
+                    </ProtectedRoute>
+                  }
+                />
+                
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
               </Routes>
             </TicketProvider>
           </ProjectProvider>
         </AuthProvider>
       </BrowserRouter>
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 3000,
-          style: {
-            background: '#363636',
-            color: '#fff',
-          },
-          success: {
-            duration: 3000,
-            iconTheme: {
-              primary: '#4ade80',
-              secondary: '#fff',
-            },
-          },
-          error: {
-            duration: 4000,
-            iconTheme: {
-              primary: '#ef4444',
-              secondary: '#fff',
-            },
-          },
-        }}
-      />
+      <Toaster position="top-right" />
     </ThemeProvider>
   );
 }

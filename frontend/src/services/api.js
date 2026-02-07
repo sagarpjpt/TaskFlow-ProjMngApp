@@ -45,6 +45,8 @@ export const authAPI = {
   getMe: () => api.get("/auth/me"),
   updateProfile: (data) => api.put("/auth/profile", data),
   getAllUsers: () => api.get("/auth/users"),
+  updateRole: (data) => api.put("/auth/role", data),
+  getTeamMembers: () => api.get("/auth/team"),
 };
 
 export const projectAPI = {
@@ -56,6 +58,10 @@ export const projectAPI = {
   addMember: (id, userId) => api.post(`/projects/${id}/members`, { userId }),
   removeMember: (id, userId) =>
     api.delete(`/projects/${id}/members`, { data: { userId } }),
+  getAll: (includeStats = false) => 
+    api.get(`/projects${includeStats ? '?includeStats=true' : ''}`),
+  archive: (id) => api.put(`/projects/${id}`, { status: 'archived' }),
+  restore: (id) => api.put(`/projects/${id}`, { status: 'active' }),
 };
 
 export const ticketAPI = {
@@ -72,6 +78,11 @@ export const commentAPI = {
   getByTicket: (ticketId) => api.get(`/comments/ticket/${ticketId}`),
   update: (id, data) => api.put(`/comments/${id}`, data),
   delete: (id) => api.delete(`/comments/${id}`),
+};
+
+export const analyticsAPI = {
+  getDashboard: () => api.get('/analytics/dashboard'),
+  getProjectStats: (projectId) => api.get(`/analytics/project/${projectId}`)
 };
 
 export default api;

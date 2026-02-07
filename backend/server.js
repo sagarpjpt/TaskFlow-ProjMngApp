@@ -24,6 +24,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/projects', require('./routes/project'));
 app.use('/api/tickets', require('./routes/ticket'));
 app.use('/api/comments', require('./routes/comment'));
+app.use('/api/analytics', require('./routes/analytics'));
 
 app.use(errorHandler);
 

@@ -51,8 +51,16 @@ exports.createTicket = async (req, res) => {
       }
     }
 
+    // Auto-increment ticket number for this project
+    const lastTicket = await Ticket.findOne({ project })
+      .sort({ ticketNumber: -1 })
+      .select("ticketNumber");
+
+    const ticketNumber = lastTicket ? lastTicket.ticketNumber + 1 : 1;
+
     const ticket = await Ticket.create({
       title,
+      ticketNumber, 
       description,
       project,
       creator: req.user._id,
@@ -62,7 +70,7 @@ exports.createTicket = async (req, res) => {
       tags: tags || [],
     });
 
-    await ticket.populate("creator assignee project", "name email title");
+    await ticket.populate("creator assignee project", "name email title key");
 
     if (assignee && assignee !== req.user._id.toString()) {
       const assignedUser = await User.findById(assignee);

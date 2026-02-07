@@ -109,7 +109,7 @@ const TicketCard = ({ ticket, onEdit, onDelete, onClick }) => {
                 fontWeight: 600,
               }}
             >
-              #{ticket._id.slice(-6).toUpperCase()}
+              {ticket.project?.key}-{ticket.ticketNumber}
             </Typography>
           </Box>
           <IconButton size="small" onClick={handleMenuClick}>
